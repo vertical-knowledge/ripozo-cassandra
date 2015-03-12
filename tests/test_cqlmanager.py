@@ -1,10 +1,14 @@
 __author__ = 'Tim Martin'
-from rest.managers.cqlmanager import CQLManager
 from cqlengine.exceptions import LWTException
 from cqlengine.query import DoesNotExist
-from tests.base import DummyModelsBase
-from tests.test_models import Person
-from tests.unit.managers.test_manager_base import TestManagerBase, generate_random_name
+from cqlengine.management import sync_table, drop_table
+from ripozo_tests.bases.manager import TestManagerMixin, generate_random_name
+
+
+from ripozo_cassandra import CQLManager
+from tests.helpers import Person, setup_cassandara, teardown_cassandra
+
+import unittest
 
 
 class PersonManager(CQLManager):
@@ -12,7 +16,22 @@ class PersonManager(CQLManager):
     fields = ('id', 'first_name', 'last_name')
 
 
-class TestCQLManagerBase(TestManagerBase, DummyModelsBase):
+class TestCQLManagerBase(TestManagerMixin, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        setup_cassandara()
+
+    def setUp(self):
+        sync_table(Person)
+        self._manager = self.manager
+
+    def tearDown(self):
+        drop_table(Person)
+
+    @classmethod
+    def tearDownClass(cls):
+        teardown_cassandra()
+
     @property
     def manager(self):
         return PersonManager()
