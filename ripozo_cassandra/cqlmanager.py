@@ -234,13 +234,11 @@ class CQLManager(BaseManager):
     def serialize_model(self, obj):
         """
         Takes a cqlengine.Model and jsonifies it.
+        This got much easier recently.
 
         :param obj: The model instance to jsonify
         :type obj: cqlengine.Model
         :return: python dictionary with field names and values
         :rtype: dict
         """
-        values = []
-        for f in self.fields:
-            values.append(getattr(obj, f))
-        return serialize_fields(self.fields, values)
+        return dict(obj)
