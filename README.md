@@ -1,1 +1,0 @@
-# ripozo-cassandra

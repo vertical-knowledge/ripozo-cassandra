@@ -17,7 +17,8 @@ setup(
     license='',
     author='Tim Martin',
     author_email='tim.martin@vertical-knowledge.com',
-    description='',
+    description=('Integrates cassandra/cqlengine with ripozo to'
+                 ' easily create cassandra backed Hypermedia/HATEOAS/REST apis'),
     install_requires=['ripozo', 'cqlengine'],
     tests_require=['ripozo-tests'],
     test_suite='tests',
