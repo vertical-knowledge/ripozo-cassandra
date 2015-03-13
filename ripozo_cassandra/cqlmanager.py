@@ -6,7 +6,11 @@ from ripozo.utilities import serialize_fields
 
 from cqlengine.query import DoesNotExist, Token
 
+from datetime import datetime
+from decimal import Decimal
+
 import logging
+import six
 
 
 class CQLManager(BaseManager):
@@ -234,11 +238,27 @@ class CQLManager(BaseManager):
     def serialize_model(self, obj):
         """
         Takes a cqlengine.Model and jsonifies it.
-        This got much easier recently.
+        This got much easier recently.  It also,
+        makes the dictionary safe to immediately call
+        json.dumps on it.
 
         :param obj: The model instance to jsonify
         :type obj: cqlengine.Model
         :return: python dictionary with field names and values
         :rtype: dict
         """
-        return dict(obj)
+        return dict(cql_to_json_encoder(obj))
+
+
+def cql_to_json_encoder(obj):
+    if isinstance(obj, dict):
+        for key, value in six.iteritems(obj, dict):
+            obj[key] = cql_to_json_encoder(value)
+    elif isinstance(obj, (list, set, tuple)):
+        for i in range(len(obj)):
+            obj[i] = cql_to_json_encoder(obj[i])
+    elif isinstance(obj, datetime):
+        obj = str(obj)
+    elif isinstance(obj, Decimal):
+        obj = float(obj)
+    return obj
