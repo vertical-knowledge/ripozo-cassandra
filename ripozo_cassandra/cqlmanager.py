@@ -1,44 +1,47 @@
-__author__ = 'Tim Martin'
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
 
 from ripozo.exceptions import NotFoundException
-from ripozo.managers.base import BaseManager
-from ripozo.utilities import serialize_fields
+from ripozo.manager_base import BaseManager
+from ripozo.utilities import make_json_safe
+from ripozo import fields
 
-from cqlengine.query import DoesNotExist, Token
-
-from datetime import datetime
-from decimal import Decimal
+from cassandra.cqlengine.query import DoesNotExist, Token
 
 import logging
 import six
+
+_logger = logging.getLogger(__name__)
 
 
 class CQLManager(BaseManager):
     """
     Works with serializing the models as json and deserializing them to cqlengine models
+
+    :param cassandra.cqlengine.models.Model model:
     """
     fail_create_if_exists = True
     allow_filtering = False
 
-    def __init__(self):
-        """
-
-        :param viewset: The viewset that is using this serializer
-        :type viewset: cassandra_rest.viewsets.base.APIBase
-        """
-        if self.model is None:
-            raise ValueError('The model class attribute must be set: {0}'.format(self.__class__.__name__))
-        if not self.fields or not isinstance(self.fields, (list, tuple,)):
-            raise ValueError('the fields class attribute must be a list or tuple: '.format(self.__class__.__name__))
-        super(CQLManager, self).__init__()
-
-    def get_field_type(self, name):
-        col = self.model._columns[name]
-        return col.db_type
-
-    @property
-    def model_name(self):
-        return self.model.__name__
+    @classmethod
+    def get_field_type(cls, name):
+        col = cls.model._columns[name]
+        db_type = col.db_type
+        if db_type in ('ascii', 'inet', 'text', 'varchar', 'timeuuid', 'uuid',):
+            return fields.StringField(col.db_field_name)
+        elif db_type in ('bigint', 'counter', 'int', 'varint',):
+            return fields.IntegerField(col.db_field_name)
+        elif db_type in ('boolean',):
+            return fields.BooleanField(col.db_field_name)
+        elif db_type in ('double', 'float', 'decimal',):
+            return fields.FloatField(col.db_field_name)
+        elif db_type in ('map',):
+            return fields.DictField(col.db_field_name)
+        elif db_type in ('list', 'set',):
+            return fields.ListField(col.db_field_name)
+        return fields.BaseField(col.db_field_name)
 
     @property
     def queryset(self):
@@ -53,13 +56,12 @@ class CQLManager(BaseManager):
         :return: Cassandra model object
         :rtype: cqlengine.Model
         """
-        logger = logging.getLogger(__name__)
-        logger.info('Creating model of type {0}'.format(str(self.model)))
-        values = self._convert_multidict_to_dict(values)
+        _logger.info('Creating model of type %s', self.model.__name__)
+        values = self.valid_fields(values, self.create_fields)
         if self.fail_create_if_exists:
-            obj = self.model.objects.if_not_exists().create(**values)
+            obj = self.model.if_not_exists().create(**values)
         else:
-            obj = self.model.objects.create(**values)
+            obj = self.model.create(**values)
         return self.serialize_model(obj)
 
     def retrieve(self, lookup_keys, *args, **kwargs):
@@ -71,8 +73,7 @@ class CQLManager(BaseManager):
         :return: The specified model using the lookup keys
         :rtype: dict
         """
-        logger = logging.getLogger(__name__)
-        logger.info('Retrieving model of type {0}'.format(str(self.model)))
+        _logger.info('Retrieving model of type %s', self.model.__name__)
         obj = self._get_model(lookup_keys)
         return self.serialize_model(obj)
 
@@ -136,14 +137,10 @@ class CQLManager(BaseManager):
         :return:
         :rtype: cqlengine.Model
         """
-        logger = logging.getLogger(__name__)
-        logger.info('Updating model of type {0}'.format(str(self.model)))
+        _logger.info('Updating model of type %s', self.model.__name__)
         obj = self._get_model(lookup_keys)
-        updates = self._convert_multidict_to_dict(updates)
+        updates = self.valid_fields(updates, self.update_fields)
         for key, value in updates.iteritems():
-            col = self.model._get_column(key)
-            if col.is_primary_key is True:
-                continue
             setattr(obj, key, value)
         obj.save()
         return self.serialize_model(obj)
@@ -155,23 +152,10 @@ class CQLManager(BaseManager):
         :param lookup_keys: A dictionary of fields and values on model to filter by
         :type lookup_keys: dict
         """
-        logger = logging.getLogger(__name__)
-        logger.info('Deleting model of type {0}'.format(str(self.model)))
+        _logger.info('Deleting model of type %s', self.model.__name__)
         obj = self._get_model(lookup_keys)
         obj.delete()
-        return
-
-    def _convert_multidict_to_dict(self, values):
-        """
-        Converts werkzeurg multidict which contains lists to a standard dictionary
-        """
-        toreturn = {}
-        for key, value in values.iteritems():
-            if isinstance(value, list) and self.model._columns[key].db_type != 'list':
-                toreturn[key] = value[0]
-            else:
-                toreturn[key] = value
-        return toreturn
+        return {}
 
     def _get_model(self, lookup_keys):
         """
@@ -188,9 +172,10 @@ class CQLManager(BaseManager):
             return obj
         except DoesNotExist:
             raise NotFoundException('The model {0} could not be found.  '
-                                    'lookup_keys: {1}'.format(self.model_name, lookup_keys))
+                                    'lookup_keys: {1}'.format(self.model.__name__, lookup_keys))
 
     def get_next_query_args(self, last_model, pagination_count, filters=None):
+        filters = filters or {}
         if last_model is None:
             return None, None
         query_args = '{0}={1}'.format(self.pagination_count_query_arg, pagination_count)
@@ -235,7 +220,7 @@ class CQLManager(BaseManager):
             queryset = queryset.filter(getattr(self.model, key) >= value)
         return queryset
 
-    def serialize_model(self, obj):
+    def serialize_model(self, obj, fields=None):
         """
         Takes a cqlengine.Model and jsonifies it.
         This got much easier recently.  It also,
@@ -247,18 +232,7 @@ class CQLManager(BaseManager):
         :return: python dictionary with field names and values
         :rtype: dict
         """
-        return dict(cql_to_json_encoder(obj))
-
-
-def cql_to_json_encoder(obj):
-    if isinstance(obj, dict):
-        for key, value in six.iteritems(obj, dict):
-            obj[key] = cql_to_json_encoder(value)
-    elif isinstance(obj, (list, set, tuple)):
-        for i in range(len(obj)):
-            obj[i] = cql_to_json_encoder(obj[i])
-    elif isinstance(obj, datetime):
-        obj = str(obj)
-    elif isinstance(obj, Decimal):
-        obj = float(obj)
-    return obj
+        fields = fields or self.fields
+        base = dict(obj)
+        base = self.valid_fields(base, fields)
+        return make_json_safe(base)
