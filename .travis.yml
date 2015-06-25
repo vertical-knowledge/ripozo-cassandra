@@ -6,7 +6,7 @@ python:
   - 3.4
   - pypy
   - pypy3
-service:
+services:
   - cassandra
 before_install:
   - pip install coveralls
