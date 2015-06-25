@@ -6,6 +6,8 @@ python:
   - "2.6"
   - "pypy"
   - "pypy3"
+services:
+  - cassandra
 install:
   - pip install coveralls
   - pip install -U ripozo-tests
