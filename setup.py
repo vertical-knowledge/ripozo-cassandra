@@ -22,8 +22,8 @@ setup(
     description=('Integrates cassandra/cqlengine with ripozo to'
                  ' easily create cassandra backed Hypermedia/HATEOAS/REST apis'),
     install_requires=[
-        'ripozo',
         'cassandra-driver',
+        'ripozo',
         'six',
     ],
     tests_require=[

@@ -10,7 +10,7 @@ services:
   - cassandra
 install:
   - pip install coveralls
-  - pip install -U ripozo-tests
+  - pip install -U cassandra-driver
   - python setup.py -q install
 script:
   coverage run --source=ripozo_cassandra setup.py test
