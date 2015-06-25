@@ -27,6 +27,7 @@ class TestBasicCassandra(unittest2.TestCase):
 
         self.model = MyModel
         connection.setup(['127.0.0.1'], self.keyspace)
+        connection.execute('DROP KEYSPACE {0}'.format(self.keyspace))
         create_keyspace(self.keyspace, strategy_class='SimpleStrategy', replication_factor=1)
         sync_table(MyModel)
 
@@ -38,7 +39,7 @@ class TestBasicCassandra(unittest2.TestCase):
         self.manager_class = MyManager
 
     def tearDown(self):
-        delete_keyspace(self.keyspace)
+        connection
 
     def test_create(self):
         """
