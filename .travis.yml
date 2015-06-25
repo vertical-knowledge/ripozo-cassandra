@@ -11,7 +11,7 @@ services:
 before_install:
   - pip install coveralls
 script:
-  - pip install -U cassandra-driver
+  - pip install -U --pre cassandra-driver
   - python setup.py -q install
   - coverage run --source=ripozo_cassandra setup.py test
 after_success:
