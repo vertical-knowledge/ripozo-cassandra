@@ -101,7 +101,7 @@ class CQLManager(BaseManager):
             last_pagination_pk = []
 
         if filters is not None:
-            for key, value in filters.iteritems():
+            for key, value in six.iteritems(filters):
                 models = models.filter(getattr(self.model, key) == value)
         if self.order_by is not None:
             models = models.order_by(self.order_by)
@@ -140,7 +140,7 @@ class CQLManager(BaseManager):
         _logger.info('Updating model of type %s', self.model.__name__)
         obj = self._get_model(lookup_keys)
         updates = self.valid_fields(updates, self.update_fields)
-        for key, value in updates.iteritems():
+        for key, value in six.iteritems(updates):
             setattr(obj, key, value)
         obj.save()
         return self.serialize_model(obj)
@@ -165,7 +165,7 @@ class CQLManager(BaseManager):
         :type lookup_keys: dict
         """
         q = self.queryset
-        for key, value in lookup_keys.iteritems():
+        for key, value in six.iteritems(lookup_keys):
             q = q.filter(getattr(self.model, key) == value)
         try:
             obj = q.get()
@@ -180,7 +180,7 @@ class CQLManager(BaseManager):
             return None, None
         query_args = '{0}={1}'.format(self.pagination_count_query_arg, pagination_count)
 
-        for filter_name, filter_value in filters.iteritems():
+        for filter_name, filter_value in six.iteritems(filters):
             query_args = '{0}&{1}={2}'.format(query_args, filter_name, filter_value)
         pagination_keys = []
         for p_name in last_model._primary_keys:
