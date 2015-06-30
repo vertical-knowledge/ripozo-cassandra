@@ -12,7 +12,6 @@ before_install:
 script:
   - pip install -U --pre cassandra-driver
   - python setup.py -q install
-  - pip install -U --pre ripozo
   - coverage run --source=ripozo_cassandra setup.py test
 after_success:
   coveralls
