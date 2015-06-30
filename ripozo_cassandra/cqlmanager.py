@@ -55,8 +55,8 @@ class CQLManager(BaseManager):
         db_type = col.db_type
         if db_type in _COLUMN_FIELD_MAP:
             field_class = _COLUMN_FIELD_MAP[db_type]
-            return field_class(col.db_type)
-        return fields.BaseField(col.db_field_name)
+            return field_class(name)
+        return fields.BaseField(name)
 
     @property
     def queryset(self):
