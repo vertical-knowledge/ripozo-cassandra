@@ -15,7 +15,7 @@ class TestCQLManager(unittest2.TestCase):
         Dumb test for explosions.
         """
         x = dict(x=1)
-        resp = CQLManager().serialize_model(x, fields=['x'])
+        resp = CQLManager().serialize_model(x, fields_list=['x'])
         self.assertDictEqual(x, resp)
 
     # def test_pagination_filtration(self):

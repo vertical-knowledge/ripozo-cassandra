@@ -1,3 +1,7 @@
+"""
+A manager for providing a common interface
+between cassandra and ripozo
+"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -13,7 +17,7 @@ from cassandra.cqlengine.query import DoesNotExist, Token
 import logging
 import six
 
-_logger = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 class CQLManager(BaseManager):
@@ -51,12 +55,13 @@ class CQLManager(BaseManager):
         """
         Creates an object using the specified values in the dict
 
-        :param values: A dictionary with the attribute names as keys and the attribute values as values
+        :param values: A dictionary with the attribute names as keys
+            and the attribute values as values
         :type values: dict
         :return: Cassandra model object
         :rtype: cqlengine.Model
         """
-        _logger.info('Creating model of type %s', self.model.__name__)
+        _LOGGER.info('Creating model of type %s', self.model.__name__)
         values = self.valid_fields(values, self.create_fields)
         if self.fail_create_if_exists:
             obj = self.model.if_not_exists().create(**values)
@@ -68,12 +73,13 @@ class CQLManager(BaseManager):
         """
         Retrieves an existing object using the lookupkeys
 
-        :param lookup_keys: A dictionary with the attribute names as keys and the attribute values as values
+        :param lookup_keys: A dictionary with the attribute names
+            as keys and the attribute values as values
         :type lookup_keys: dict
         :return: The specified model using the lookup keys
         :rtype: dict
         """
-        _logger.info('Retrieving model of type %s', self.model.__name__)
+        _LOGGER.info('Retrieving model of type %s', self.model.__name__)
         obj = self._get_model(lookup_keys)
         return self.serialize_model(obj)
 
@@ -88,7 +94,8 @@ class CQLManager(BaseManager):
         :rtype: list
         """
         logger = logging.getLogger(__name__)
-        logger.info('Retrieving list of models of type {0} with filters: {1}'.format(str(self.model), filters))
+        logger.info('Retrieving list of models of type %s with '
+                    'filters: %s', str(self.model), filters)
         obj_list = []
         models = self.queryset
         if self.allow_filtering:
@@ -106,11 +113,14 @@ class CQLManager(BaseManager):
         if self.order_by is not None:
             models = models.order_by(self.order_by)
 
-        models = self.pagination_filtration(models, last_pagination_pk=last_pagination_pk, filters=filters)
+        models = self.pagination_filtration(models,
+                                            last_pagination_pk=last_pagination_pk,
+                                            filters=filters)
         models = models.limit(pagination_count + 1)
 
         last_model = None
-        if len(models) > pagination_count:  # Handle the extra model used for finding the next batch
+        # Handle the extra model used for finding the next batch
+        if len(models) > pagination_count:
             last_model = models[-1]
             models = models[:pagination_count]
 
@@ -121,7 +131,9 @@ class CQLManager(BaseManager):
                               self.pagination_count_query_arg: pagination_count,
                               self.pagination_next: None}
         else:
-            query_args, pagination_keys = self.get_next_query_args(last_model, pagination_count, filters=filters)
+            query_args, pagination_keys = self.get_next_query_args(last_model,
+                                                                   pagination_count,
+                                                                   filters=filters)
             return obj_list, {self.pagination_pk_query_arg: pagination_keys,
                               self.pagination_count_query_arg: pagination_count,
                               self.pagination_next: query_args}
@@ -137,7 +149,7 @@ class CQLManager(BaseManager):
         :return:
         :rtype: cqlengine.Model
         """
-        _logger.info('Updating model of type %s', self.model.__name__)
+        _LOGGER.info('Updating model of type %s', self.model.__name__)
         obj = self._get_model(lookup_keys)
         updates = self.valid_fields(updates, self.update_fields)
         for key, value in six.iteritems(updates):
@@ -152,7 +164,7 @@ class CQLManager(BaseManager):
         :param lookup_keys: A dictionary of fields and values on model to filter by
         :type lookup_keys: dict
         """
-        _logger.info('Deleting model of type %s', self.model.__name__)
+        _LOGGER.info('Deleting model of type %s', self.model.__name__)
         obj = self._get_model(lookup_keys)
         obj.delete()
         return {}
@@ -164,11 +176,11 @@ class CQLManager(BaseManager):
         :param lookup_keys: A dictionary of fields and values on the model to filter by
         :type lookup_keys: dict
         """
-        q = self.queryset
+        queryset = self.queryset
         for key, value in six.iteritems(lookup_keys):
-            q = q.filter(getattr(self.model, key) == value)
+            queryset = queryset.filter(getattr(self.model, key) == value)
         try:
-            obj = q.get()
+            obj = queryset.get()
             return obj
         except DoesNotExist:
             raise NotFoundException('The model {0} could not be found.  '
@@ -220,7 +232,7 @@ class CQLManager(BaseManager):
             queryset = queryset.filter(getattr(self.model, key) >= value)
         return queryset
 
-    def serialize_model(self, obj, fields=None):
+    def serialize_model(self, obj, fields_list=None):
         """
         Takes a cqlengine.Model and jsonifies it.
         This got much easier recently.  It also,
@@ -232,7 +244,7 @@ class CQLManager(BaseManager):
         :return: python dictionary with field names and values
         :rtype: dict
         """
-        fields = fields or self.fields
+        fields_list = fields_list or self.fields
         base = dict(obj)
-        base = self.valid_fields(base, fields)
+        base = self.valid_fields(base, fields_list)
         return make_json_safe(base)
