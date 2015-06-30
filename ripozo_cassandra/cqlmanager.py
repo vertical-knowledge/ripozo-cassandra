@@ -19,6 +19,26 @@ import six
 
 _LOGGER = logging.getLogger(__name__)
 
+_COLUMN_FIELD_MAP = {
+    'ascii': fields.StringField,
+    'inet': fields.StringField,
+    'text': fields.StringField,
+    'varchar': fields.StringField,
+    'timeuuid': fields.StringField,
+    'uuid': fields.StringField,
+    'bigint': fields.IntegerField,
+    'counter': fields.IntegerField,
+    'int': fields.IntegerField,
+    'varint': fields.IntegerField,
+    'boolean': fields.BooleanField,
+    'double': fields.FloatField,
+    'float': fields.FloatField,
+    'decimal': fields.FloatField,
+    'map': fields.DictField,
+    'list': fields.ListField,
+    'set': fields.ListField
+}
+
 
 class CQLManager(BaseManager):
     """
@@ -33,18 +53,9 @@ class CQLManager(BaseManager):
     def get_field_type(cls, name):
         col = cls.model._columns[name]
         db_type = col.db_type
-        if db_type in ('ascii', 'inet', 'text', 'varchar', 'timeuuid', 'uuid',):
-            return fields.StringField(col.db_field_name)
-        elif db_type in ('bigint', 'counter', 'int', 'varint',):
-            return fields.IntegerField(col.db_field_name)
-        elif db_type in ('boolean',):
-            return fields.BooleanField(col.db_field_name)
-        elif db_type in ('double', 'float', 'decimal',):
-            return fields.FloatField(col.db_field_name)
-        elif db_type in ('map',):
-            return fields.DictField(col.db_field_name)
-        elif db_type in ('list', 'set',):
-            return fields.ListField(col.db_field_name)
+        if db_type in _COLUMN_FIELD_MAP:
+            field_class = _COLUMN_FIELD_MAP[db_type]
+            return field_class(col.db_type)
         return fields.BaseField(col.db_field_name)
 
     @property
