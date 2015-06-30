@@ -9,7 +9,7 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
-version = '0.1.0b1'
+version = '0.1.0b2'
 
 setup(
     name='ripozo-cassandra',

@@ -2,28 +2,17 @@ ripozo-cassandra
 ================
 
 .. image:: https://travis-ci.org/vertical-knowledge/ripozo-cassandra.svg?branch=master&style=flat
-    :target: https://travis-ci.org/vertical-knowledge/ripozo-cassandra
+    :target: https://travis-ci.org/vertical-knowledge/ripozo-cassandra?style=flat
+    :alt: test status
 
 .. image:: https://coveralls.io/repos/vertical-knowledge/ripozo-cassandra/badge.svg?branch=master&style=flat
-  :target: https://coveralls.io/r/vertical-knowledge/ripozo-cassandra?branch=master
+    :target: https://coveralls.io/r/vertical-knowledge/ripozo-cassandra?branch=master&style=flat
+    :alt: test coverage
 
 .. image:: https://readthedocs.org/projects/ripozo-cassandra/badge/?version=latest&style=flat
-    :target: https://ripozo-cassandra.readthedocs.org/
-    :alt: Documentation Status
+    :target: https://ripozo-cassandra.readthedocs.org/?style=flat
+    :alt: documentation
 
-.. image:: https://pypip.in/version/ripozo-cassandra/badge.svg?style=flat
-    :target: https://pypi.python.org/pypi/ripozo-cassandra/
-
-.. image:: https://pypip.in/d/ripozo-cassandra/badge.png?style=flat
-    :target: https://crate.io/packages/ripozo-cassandra/
-    :alt: Number of PyPI downloads
-
-.. image:: https://pypip.in/wheel/ripozo-cassandra/badge.svg?style=flat
-    :target: https://pypi.python.org/pypi/ripozo-cassandra/
-    :alt: Wheel Status
-
-.. image:: https://pypip.in/py_versions/ripozo-cassandra/badge.svg?style=flat
-    :target: https://pypi.python.org/pypi/ripozo-cassandra/
 
 ripozo-cassandra is a ripozo-extension that provides a Manager that
 integrates cqlengine (and thereby Cassandra) with ripozo.  It provides
@@ -70,15 +59,14 @@ lines of code.
     # This creates a resource class that can be given
     # to a dispatcher (e.g. the flask-ripozo package's FlaskDispatcher)
     class PersonResource(ResourceBase):
-        _manager = PersonManager
-        _pks = ['id']
-        _namespace = '/api'
+        manager = PersonManager
+        pks = ['id']
 
         # A retrieval method that will operate on the '/api/person' route
         # It retrieves the id, first_name, and last_name properties
         @apimethod(methods=['GET'])
-        def get_person(cls, primary_keys, filters, values, *args, **kwargs):
-            properties = self.manager.retrieve(primary_keys)
+        def get_person(cls, request):
+            properties = self.manager.retrieve(request.url_params)
             return cls(properties=properties)
 
 

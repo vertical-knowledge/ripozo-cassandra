@@ -84,7 +84,7 @@ class CQLManager(BaseManager):
         :param filters: The named parameters to filter the models on
         :type filters: dict
         :return: tuple 0 index = a list of the models as dictionary objects
-        1 index = the query args for retrieving the next in pagination
+            1 index = the query args for retrieving the next in pagination
         :rtype: list
         """
         logger = logging.getLogger(__name__)
